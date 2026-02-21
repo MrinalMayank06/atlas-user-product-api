@@ -9,11 +9,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-# Install system dependencies (if needed)
+# --- FIX: Update system packages and install required SSL libraries ---
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        libffi-dev \
+        libssl-dev \
+        # Add ca-certificates to ensure SSL certificates are up-to-date
+        ca-certificates \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Update CA certificates
+    && update-ca-certificates --fresh
+# --------------------------------------------------------------------
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -24,8 +32,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY ./app /app/app
 
-# Expose port 8000
+# Expose port 8000 (or use the PORT environment variable)
 EXPOSE 8000
 
-# Start FastAPI using uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Use the PORT environment variable dynamically
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
